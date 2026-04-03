@@ -493,7 +493,7 @@ export default function GamePage() {
             {currentRound && (
               <>
                 <span>
-                  Trump: <SuitBadge suit={currentRound.trump_suit} />
+                  Trump: <SuitBadge suit={selectedTrump || currentRound.trump_suit} />
                 </span>
                 <span>·</span>
                 <span>{currentRound.num_cards} cards</span>
