@@ -9,6 +9,7 @@ import {
   Trophy,
   ChevronRight,
   Eye,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useAdmin } from "../../context/AdminContext";
@@ -109,9 +110,12 @@ export default function GamePage() {
   const [data, setData] = useState<GameData | null>(null);
   const [loading, setLoading] = useState(true);
   const [bidValues, setBidValues] = useState<Record<number, number>>({});
+  const [selectedTrump, setSelectedTrump] = useState<string>("");
   const [trickValues, setTrickValues] = useState<Record<number, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [finalStandings, setFinalStandings] = useState<
     Array<{
       playerId: number;
@@ -130,13 +134,14 @@ export default function GamePage() {
       const d: GameData = await res.json();
       setData(d);
 
-      // Initialize bid values
+      // Initialize bid values and trump
       if (d.currentRound?.phase === "bidding") {
         const init: Record<number, number> = {};
         d.players.forEach((p) => {
           init[p.id] = 0;
         });
         setBidValues(init);
+        setSelectedTrump(d.currentRound.trump_suit || "");
       }
 
       // Initialize trick values
@@ -224,7 +229,7 @@ export default function GamePage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bids: bidValues }),
+          body: JSON.stringify({ bids: bidValues, trumpSuit: selectedTrump }),
         }
       );
       if (!res.ok) {
@@ -281,6 +286,17 @@ export default function GamePage() {
       setError(err instanceof Error ? err.message : "Error");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteGame = async () => {
+    setDeleting(true);
+    try {
+      await fetch(`/api/games/${gameId}`, { method: "DELETE" });
+      router.push("/");
+    } catch {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -432,12 +448,40 @@ export default function GamePage() {
 
   return (
     <div className="p-4">
+      {/* Delete confirm modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">
+          <div className="bg-[#161b16] border border-[#2d3d2d] rounded-2xl p-5 w-full max-w-xs">
+            <h3 className="text-lg font-bold mb-2">Delete Game?</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              This will permanently delete all rounds and scores.
+              {game.status === "completed" && " ELO changes will be reversed."}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-[#2d3d2d] text-gray-400 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteGame}
+                disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-sm font-semibold"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3 mb-4 pt-2">
         <Link href="/" className="text-gray-400 hover:text-white">
           <ChevronLeft size={24} />
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-lg font-bold">
             Round {game.current_round} of {game.num_rounds}
           </h1>
@@ -459,6 +503,14 @@ export default function GamePage() {
             )}
           </div>
         </div>
+        {isAdmin && (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="text-gray-600 hover:text-red-400 transition-colors ml-auto"
+          >
+            <Trash2 size={18} />
+          </button>
+        )}
       </div>
 
       {/* Leaderboard */}
@@ -517,6 +569,34 @@ export default function GamePage() {
               </span>
             )}
           </p>
+
+          {/* Trump suit selector */}
+          <div className="mb-4">
+            <p className="text-xs text-gray-500 mb-2">Trump Suit</p>
+            <div className="flex gap-2">
+              {[
+                { key: "Spades", label: "♠", color: "text-blue-300" },
+                { key: "Hearts", label: "♥", color: "text-red-400" },
+                { key: "Diamonds", label: "♦", color: "text-red-400" },
+                { key: "Clubs", label: "♣", color: "text-blue-300" },
+                { key: "No Trump", label: "NT", color: "text-gray-300" },
+              ].map((suit) => (
+                <button
+                  key={suit.key}
+                  onClick={() => setSelectedTrump(suit.key)}
+                  className={`flex-1 py-2 rounded-xl border text-sm font-bold transition-all ${
+                    selectedTrump === suit.key
+                      ? "border-[#10b981] bg-[#10b981]/20 text-white"
+                      : "border-[#2d3d2d] bg-[#0f160f] hover:border-[#10b981]/40"
+                  }`}
+                >
+                  <span className={selectedTrump === suit.key ? "" : suit.color}>
+                    {suit.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="space-y-3">
             {biddingOrder.map((player, idx) => {
@@ -619,9 +699,9 @@ export default function GamePage() {
                     <div className="text-xs text-gray-500">
                       Bid: <span className="text-white">{bid}</span>
                       {tricksWon === bid ? (
-                        <span className="ml-2 text-[#10b981]">
-                          +{10 + bid} pts
-                        </span>
+                        <span className="ml-2 text-[#10b981]">+{10 + bid} pts</span>
+                      ) : tricksWon > bid ? (
+                        <span className="ml-2 text-amber-400">+{tricksWon} pts</span>
                       ) : (
                         <span className="ml-2 text-gray-600">+0 pts</span>
                       )}

@@ -13,7 +13,7 @@ export async function POST(
     const { id, roundId } = await params;
     const gameId = parseInt(id);
     const roundIdNum = parseInt(roundId);
-    const { bids } = await request.json();
+    const { bids, trumpSuit } = await request.json();
 
     const db = await getDb();
 
@@ -70,16 +70,22 @@ export async function POST(
         args: [roundIdNum, parseInt(pidStr), bidAmount] as (string | number)[],
       }));
 
-    await db.batch(
-      [
-        ...bidStatements,
-        {
-          sql: "UPDATE rounds SET phase = 'scoring' WHERE id = ?",
-          args: [roundIdNum],
-        },
-      ],
-      "write"
-    );
+    const updateStatements: { sql: string; args: (string | number)[] }[] = [
+      ...bidStatements,
+      {
+        sql: "UPDATE rounds SET phase = 'scoring' WHERE id = ?",
+        args: [roundIdNum],
+      },
+    ];
+
+    if (trumpSuit) {
+      updateStatements.push({
+        sql: "UPDATE rounds SET trump_suit = ? WHERE id = ?",
+        args: [trumpSuit, roundIdNum],
+      });
+    }
+
+    await db.batch(updateStatements, "write");
 
     return NextResponse.json({ success: true });
   } catch (error) {
