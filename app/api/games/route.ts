@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import getDb from "@/lib/db";
-import { getTrumpSuit, getNumCardsForRound } from "@/lib/db";
+import { getTrumpSuit, getNumCardsForRound, getNumRounds } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 
 export async function GET() {
@@ -20,7 +20,6 @@ export async function GET() {
       completed_at: string | null;
     }>;
 
-    // Enrich with player names
     const enriched = await Promise.all(
       games.map(async (game) => {
         const playerIds: number[] = JSON.parse(game.player_order);
@@ -47,7 +46,7 @@ export async function POST(request: NextRequest) {
   if (authError) return authError;
 
   try {
-    const { playerIds, maxCards } = await request.json();
+    const { playerIds, maxCards, minCards = 1 } = await request.json();
 
     if (!playerIds || !Array.isArray(playerIds) || playerIds.length < 2) {
       return NextResponse.json(
@@ -61,17 +60,23 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (minCards < 1 || minCards > maxCards) {
+      return NextResponse.json(
+        { error: "minCards must be between 1 and maxCards" },
+        { status: 400 }
+      );
+    }
 
     const db = await getDb();
-    const numRounds = 2 * maxCards - 1;
+    const numRounds = getNumRounds(maxCards, minCards);
 
     const gameResult = await db.execute({
-      sql: "INSERT INTO games (player_order, num_rounds) VALUES (?, ?)",
-      args: [JSON.stringify(playerIds), numRounds],
+      sql: "INSERT INTO games (player_order, num_rounds, min_cards, max_cards) VALUES (?, ?, ?, ?)",
+      args: [JSON.stringify(playerIds), numRounds, minCards, maxCards],
     });
     const gameId = Number(gameResult.lastInsertRowid);
 
-    const numCards = getNumCardsForRound(1, maxCards);
+    const numCards = getNumCardsForRound(1, maxCards, minCards);
     const trumpSuit = getTrumpSuit(0);
 
     await db.execute({

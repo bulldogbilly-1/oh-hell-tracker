@@ -23,6 +23,8 @@ async function initializeClient(): Promise<Client> {
       player_order TEXT NOT NULL,
       num_rounds INTEGER NOT NULL,
       current_round INTEGER NOT NULL DEFAULT 1,
+      min_cards INTEGER NOT NULL DEFAULT 1,
+      max_cards INTEGER NOT NULL DEFAULT 7,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       completed_at TEXT
     );
@@ -73,6 +75,18 @@ async function initializeClient(): Promise<Client> {
     );
   `);
 
+  // Migrations for existing databases
+  for (const migration of [
+    "ALTER TABLE games ADD COLUMN min_cards INTEGER NOT NULL DEFAULT 1",
+    "ALTER TABLE games ADD COLUMN max_cards INTEGER NOT NULL DEFAULT 7",
+  ]) {
+    try {
+      await db.execute(migration);
+    } catch {
+      // Column already exists — ignore
+    }
+  }
+
   return db;
 }
 
@@ -100,6 +114,8 @@ export interface Game {
   player_order: string;
   num_rounds: number;
   current_round: number;
+  min_cards: number;
+  max_cards: number;
   created_at: string;
   completed_at: string | null;
 }
@@ -145,14 +161,32 @@ export function getTrumpSuit(roundIndex: number): string {
   return suits[roundIndex % suits.length];
 }
 
-// Utility: compute cards dealt for each round
-// Rounds go 1, 2, ..., maxCards, maxCards-1, ..., 1
+// Utility: compute cards dealt for a given round number (1-indexed)
+// Rounds go: minCards, minCards+1, ..., maxCards, ..., minCards+1, minCards
+// Total rounds = 2 * (maxCards - minCards) + 1
 export function getNumCardsForRound(
   roundNumber: number,
-  maxCards: number
+  maxCards: number,
+  minCards: number = 1
 ): number {
-  if (roundNumber <= maxCards) {
-    return roundNumber;
+  const midpoint = maxCards - minCards + 1; // round number at which we hit max
+  if (roundNumber <= midpoint) {
+    return minCards + roundNumber - 1;
   }
-  return 2 * maxCards - roundNumber;
+  return maxCards - (roundNumber - midpoint);
+}
+
+// Utility: total rounds given min and max cards
+export function getNumRounds(maxCards: number, minCards: number = 1): number {
+  return 2 * (maxCards - minCards) + 1;
+}
+
+// Utility: calculate score for a round
+// Exact bid: 10 + bid
+// Over bid (won more than bid): tricks_won
+// Under bid (won fewer than bid): 0
+export function calculateScore(bid: number, tricksWon: number): number {
+  if (tricksWon === bid) return 10 + bid;
+  if (tricksWon > bid) return tricksWon;
+  return 0;
 }

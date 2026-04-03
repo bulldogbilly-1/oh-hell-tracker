@@ -23,11 +23,12 @@ export async function POST(
       return NextResponse.json({ error: "Game not found" }, { status: 404 });
     }
     const game = gameResult.rows[0] as unknown as {
-      id: number;
       status: string;
       player_order: string;
       num_rounds: number;
       current_round: number;
+      min_cards: number;
+      max_cards: number;
     };
 
     if (game.status !== "active") {
@@ -44,8 +45,7 @@ export async function POST(
 
     const playerIds: number[] = JSON.parse(game.player_order);
     const numPlayers = playerIds.length;
-    const maxCards = Math.ceil(game.num_rounds / 2);
-    const numCards = getNumCardsForRound(nextRound, maxCards);
+    const numCards = getNumCardsForRound(nextRound, game.max_cards, game.min_cards);
     const trumpSuit = getTrumpSuit(nextRound - 1);
     const dealerIndex = (nextRound - 1) % numPlayers;
 

@@ -22,8 +22,10 @@ export default function NewGamePage() {
       router.replace("/");
     }
   }, [isAdmin, isLoading, router]);
+
   const [players, setPlayers] = useState<Player[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
+  const [minCards, setMinCards] = useState(1);
   const [maxCards, setMaxCards] = useState(7);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -40,7 +42,7 @@ export default function NewGamePage() {
     );
   };
 
-  const numRounds = 2 * maxCards - 1;
+  const numRounds = 2 * (maxCards - minCards) + 1;
 
   const handleStart = async () => {
     if (selected.length < 2) {
@@ -53,7 +55,7 @@ export default function NewGamePage() {
       const res = await fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerIds: selected, maxCards }),
+        body: JSON.stringify({ playerIds: selected, maxCards, minCards }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -112,15 +114,11 @@ export default function NewGamePage() {
                   </div>
                   <div className="flex-1 text-left">
                     <div className="font-semibold text-sm">{p.name}</div>
-                    <div className="text-xs text-gray-500">
-                      ELO {Math.round(p.elo)}
-                    </div>
+                    <div className="text-xs text-gray-500">ELO {Math.round(p.elo)}</div>
                   </div>
                   {isSelected ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">
-                        Seat {seatNum + 1}
-                      </span>
+                      <span className="text-xs text-gray-400">Seat {seatNum + 1}</span>
                       <div className="w-5 h-5 rounded-full bg-[#10b981] flex items-center justify-center">
                         <Check size={12} />
                       </div>
@@ -135,37 +133,61 @@ export default function NewGamePage() {
         )}
       </div>
 
-      {/* Max Cards */}
+      {/* Min / Max Cards */}
       <div className="mb-6">
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-          Max Cards per Player
+          Round Size
         </h2>
         <div className="bg-[#161b16] border border-[#1f2d1f] rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => setMaxCards((v) => Math.max(1, v - 1))}
-              className="w-10 h-10 rounded-lg bg-[#0f160f] border border-[#2d3d2d] flex items-center justify-center hover:border-[#10b981]/40"
-            >
-              <Minus size={16} />
-            </button>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-[#10b981]">{maxCards}</div>
-              <div className="text-xs text-gray-500 mt-1">cards</div>
+          <div className="grid grid-cols-2 gap-4 mb-3">
+            {/* Min Cards */}
+            <div>
+              <p className="text-xs text-gray-500 text-center mb-2">Min Cards</p>
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  onClick={() => setMinCards((v) => Math.max(1, v - 1))}
+                  className="w-8 h-8 rounded-lg bg-[#0f160f] border border-[#2d3d2d] flex items-center justify-center hover:border-[#10b981]/40"
+                >
+                  <Minus size={14} />
+                </button>
+                <div className="text-2xl font-bold text-[#10b981]">{minCards}</div>
+                <button
+                  onClick={() => setMinCards((v) => Math.min(maxCards, v + 1))}
+                  className="w-8 h-8 rounded-lg bg-[#0f160f] border border-[#2d3d2d] flex items-center justify-center hover:border-[#10b981]/40"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => setMaxCards((v) => Math.min(13, v + 1))}
-              className="w-10 h-10 rounded-lg bg-[#0f160f] border border-[#2d3d2d] flex items-center justify-center hover:border-[#10b981]/40"
-            >
-              <Plus size={16} />
-            </button>
+
+            {/* Max Cards */}
+            <div>
+              <p className="text-xs text-gray-500 text-center mb-2">Max Cards</p>
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  onClick={() => setMaxCards((v) => Math.max(minCards, v - 1))}
+                  className="w-8 h-8 rounded-lg bg-[#0f160f] border border-[#2d3d2d] flex items-center justify-center hover:border-[#10b981]/40"
+                >
+                  <Minus size={14} />
+                </button>
+                <div className="text-2xl font-bold text-[#10b981]">{maxCards}</div>
+                <button
+                  onClick={() => setMaxCards((v) => Math.min(13, v + 1))}
+                  className="w-8 h-8 rounded-lg bg-[#0f160f] border border-[#2d3d2d] flex items-center justify-center hover:border-[#10b981]/40"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+            </div>
           </div>
+
           <div className="text-center text-xs text-gray-500">
-            {numRounds} rounds total (1 → {maxCards} → 1)
+            {numRounds} rounds total ({minCards} → {maxCards} → {minCards})
           </div>
         </div>
       </div>
 
-      {/* Game preview */}
+      {/* Dealer order preview */}
       {selected.length >= 2 && (
         <div className="mb-6 bg-[#161b16] border border-[#1f2d1f] rounded-xl p-4">
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import getDb, { calculateScore } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 
 export async function POST(
@@ -81,7 +81,7 @@ export async function POST(
       .map(([pidStr, tricksWon]) => {
         const pid = parseInt(pidStr);
         const bid = bidMap.get(pid) ?? 0;
-        const score = bid === tricksWon ? 10 + bid : 0;
+        const score = calculateScore(bid, tricksWon);
         return {
           sql: "INSERT OR REPLACE INTO tricks (round_id, player_id, tricks_won, score) VALUES (?, ?, ?, ?)",
           args: [roundIdNum, pid, tricksWon, score] as (string | number)[],
