@@ -455,7 +455,6 @@ export default function GamePage() {
             <h3 className="text-lg font-bold mb-2">Delete Game?</h3>
             <p className="text-sm text-gray-400 mb-4">
               This will permanently delete all rounds and scores.
-              {game.status === "completed" && " ELO changes will be reversed."}
             </p>
             <div className="flex gap-3">
               <button
