@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Spade } from "lucide-react";
+import { Plus, Spade, Trash2 } from "lucide-react";
 import { useAdmin } from "./context/AdminContext";
 
 interface GamePlayer {
@@ -29,49 +29,73 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function GameCard({ game }: { game: Game }) {
+function GameCard({
+  game,
+  isAdmin,
+  onDelete,
+}: {
+  game: Game;
+  isAdmin: boolean;
+  onDelete: (id: number) => void;
+}) {
   const isActive = game.status === "active";
 
   return (
-    <Link href={`/games/${game.id}`}>
-      <div className="bg-[#161b16] border border-[#1f2d1f] rounded-xl p-4 mb-3 hover:border-[#10b981]/40 transition-all active:scale-[0.98]">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                isActive
-                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                  : "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/30"
-              }`}
-            >
-              {isActive ? "LIVE" : "DONE"}
-            </span>
-            <span className="text-xs text-gray-500">
-              {formatDate(game.created_at)}
-            </span>
-          </div>
-          <div className="text-xs text-gray-400">
-            {isActive
-              ? `Round ${game.current_round} of ${game.num_rounds}`
-              : `${game.num_rounds} rounds`}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          {game.players.map((p) => (
-            <div key={p.id} className="flex items-center gap-1.5">
-              <div
-                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                style={{ backgroundColor: p.color }}
+    <div className="relative mb-3">
+      <Link href={`/games/${game.id}`}>
+        <div className="bg-[#161b16] border border-[#1f2d1f] rounded-xl p-4 hover:border-[#10b981]/40 transition-all active:scale-[0.98]">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  isActive
+                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                    : "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/30"
+                }`}
               >
-                {p.name.charAt(0).toUpperCase()}
-              </div>
-              <span className="text-sm text-gray-300">{p.name}</span>
+                {isActive ? "LIVE" : "DONE"}
+              </span>
+              <span className="text-xs text-gray-500">
+                {formatDate(game.created_at)}
+              </span>
             </div>
-          ))}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400">
+                {isActive
+                  ? `Round ${game.current_round} of ${game.num_rounds}`
+                  : `${game.num_rounds} rounds`}
+              </span>
+              {isAdmin && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDelete(game.id);
+                  }}
+                  className="text-gray-600 hover:text-red-400 transition-colors p-1"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {game.players.map((p) => (
+              <div key={p.id} className="flex items-center gap-1.5">
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                  style={{ backgroundColor: p.color }}
+                >
+                  {p.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-sm text-gray-300">{p.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }
 
@@ -80,8 +104,10 @@ export default function GamesPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [tab, setTab] = useState<TabType>("all");
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
+  const loadGames = useCallback(() => {
     fetch("/api/games")
       .then((r) => r.json())
       .then((data) => {
@@ -90,6 +116,28 @@ export default function GamesPage() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    loadGames();
+  }, [loadGames]);
+
+  const [deleteError, setDeleteError] = useState("");
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError("");
+    const res = await fetch(`/api/games/${deleteTarget}`, { method: "DELETE" });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setDeleteError(d.error || `Error ${res.status}`);
+      setDeleting(false);
+      return;
+    }
+    setDeleteTarget(null);
+    setDeleting(false);
+    loadGames();
+  };
 
   const filtered = games.filter((g) => {
     if (tab === "active") return g.status === "active";
@@ -101,6 +149,36 @@ export default function GamesPage() {
 
   return (
     <div className="p-4">
+      {/* Delete confirm modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">
+          <div className="bg-[#161b16] border border-[#2d3d2d] rounded-2xl p-5 w-full max-w-xs">
+            <h3 className="text-lg font-bold mb-2">Delete Game?</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              This will permanently delete all rounds and scores. ELO changes will be reversed if the game was completed.
+            </p>
+            {deleteError && (
+              <p className="text-sm text-red-400 mb-3">{deleteError}</p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 py-2.5 rounded-xl border border-[#2d3d2d] text-gray-400 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-sm font-semibold"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6 pt-2">
         <div>
@@ -157,7 +235,14 @@ export default function GamesPage() {
           )}
         </div>
       ) : (
-        filtered.map((g) => <GameCard key={g.id} game={g} />)
+        filtered.map((g) => (
+          <GameCard
+            key={g.id}
+            game={g}
+            isAdmin={isAdmin}
+            onDelete={setDeleteTarget}
+          />
+        ))
       )}
     </div>
   );

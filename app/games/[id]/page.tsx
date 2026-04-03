@@ -292,9 +292,14 @@ export default function GamePage() {
   const handleDeleteGame = async () => {
     setDeleting(true);
     try {
-      await fetch(`/api/games/${gameId}`, { method: "DELETE" });
+      const res = await fetch(`/api/games/${gameId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || `Server error ${res.status}`);
+      }
       router.push("/");
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete game");
       setDeleting(false);
       setShowDeleteConfirm(false);
     }
