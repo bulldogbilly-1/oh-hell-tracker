@@ -127,7 +127,7 @@ export default function GamesPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     setDeleteError("");
-    const res = await fetch(`/api/games/${deleteTarget}`, { method: "DELETE" });
+    const res = await fetch(`/api/games/${deleteTarget}/delete`, { method: "POST" });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
       setDeleteError(d.error || `Error ${res.status}`);

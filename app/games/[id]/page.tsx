@@ -292,7 +292,7 @@ export default function GamePage() {
   const handleDeleteGame = async () => {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/games/${gameId}`, { method: "DELETE" });
+      const res = await fetch(`/api/games/${gameId}/delete`, { method: "POST" });
       if (!res.ok) {
         const d = await res.json();
         throw new Error(d.error || `Server error ${res.status}`);
