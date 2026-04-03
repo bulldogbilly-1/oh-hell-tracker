@@ -9,14 +9,17 @@ function expectedScore(eloA: number, eloB: number): number {
 
 /**
  * Calculate new ELO ratings for all players after a game.
- * Rankings: array of player IDs in finish order (index 0 = 1st place).
- * Ties allowed by passing same rank.
+ * Uses normalized scores (0-1) instead of rank for pairwise comparisons,
+ * so margin of victory and bid accuracy are factored in.
+ *
+ * For each pair (A, B): actualA = normA / (normA + normB)
+ * This means beating someone by more = bigger ELO swing.
  *
  * Returns map of playerId -> eloChange
  */
 export function calculateEloChanges(
   players: { id: number; elo: number }[],
-  rankings: { playerId: number; rank: number }[] // rank 1 = best
+  normalizedScores: { playerId: number; normalizedScore: number }[]
 ): Map<number, number> {
   const n = players.length;
   const eloMap = new Map(players.map((p) => [p.id, p.elo]));
@@ -28,23 +31,20 @@ export function calculateEloChanges(
       const playerA = players[i];
       const playerB = players[j];
 
-      const rankA = rankings.find((r) => r.playerId === playerA.id)?.rank ?? n;
-      const rankB = rankings.find((r) => r.playerId === playerB.id)?.rank ?? n;
+      const normA = normalizedScores.find((s) => s.playerId === playerA.id)?.normalizedScore ?? 0;
+      const normB = normalizedScores.find((s) => s.playerId === playerB.id)?.normalizedScore ?? 0;
 
+      // Proportional actual score: larger margin = closer to 1 or 0
+      // If both scored 0 (shouldn't happen), treat as a tie
       let actualA: number;
       let actualB: number;
 
-      if (rankA < rankB) {
-        // A finished better
-        actualA = 1.0;
-        actualB = 0.0;
-      } else if (rankA > rankB) {
-        actualA = 0.0;
-        actualB = 1.0;
-      } else {
-        // Tie
+      if (normA + normB === 0) {
         actualA = 0.5;
         actualB = 0.5;
+      } else {
+        actualA = normA / (normA + normB);
+        actualB = normB / (normA + normB);
       }
 
       const expA = expectedScore(eloMap.get(playerA.id)!, eloMap.get(playerB.id)!);
@@ -58,7 +58,7 @@ export function calculateEloChanges(
     }
   }
 
-  // Normalize by (N-1) to make zero-sum
+  // Normalize by (N-1) to keep scale consistent regardless of player count
   for (const [id, change] of changes) {
     changes.set(id, change / (n - 1));
   }
@@ -68,6 +68,7 @@ export function calculateEloChanges(
 
 /**
  * Assign ranks based on total game scores (higher = better).
+ * Used for display purposes only (standings screen).
  * Returns array of {playerId, rank} where rank 1 = winner.
  */
 export function assignRanks(

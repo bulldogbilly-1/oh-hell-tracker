@@ -190,3 +190,15 @@ export function calculateScore(bid: number, tricksWon: number): number {
   if (tricksWon > bid) return tricksWon;
   return 0;
 }
+
+// Utility: calculate the theoretical maximum score for a game
+// Assumes a player bids and wins all cards every round (10 + numCards per round)
+export function calculateMaxPossibleScore(maxCards: number, minCards: number = 1): number {
+  const numRounds = getNumRounds(maxCards, minCards);
+  let maxScore = 0;
+  for (let round = 1; round <= numRounds; round++) {
+    const numCards = getNumCardsForRound(round, maxCards, minCards);
+    maxScore += 10 + numCards;
+  }
+  return maxScore;
+}

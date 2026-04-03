@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import getDb, { calculateMaxPossibleScore } from "@/lib/db";
 import { calculateEloChanges, assignRanks } from "@/lib/elo";
 import { requireAdmin } from "@/lib/auth";
 
@@ -28,6 +28,8 @@ export async function POST(
       player_order: string;
       num_rounds: number;
       current_round: number;
+      min_cards: number;
+      max_cards: number;
     };
 
     if (game.status === "completed") {
@@ -55,6 +57,13 @@ export async function POST(
 
     const rankings = assignRanks(finalScores);
 
+    // Normalize scores: each player's score as a fraction of max possible
+    const maxPossibleScore = calculateMaxPossibleScore(game.max_cards, game.min_cards);
+    const normalizedScores = finalScores.map((s) => ({
+      playerId: s.playerId,
+      normalizedScore: maxPossibleScore > 0 ? s.totalScore / maxPossibleScore : 0,
+    }));
+
     // Get current ELOs
     const players = await Promise.all(
       playerIds.map(async (pid) => {
@@ -66,7 +75,7 @@ export async function POST(
       })
     );
 
-    const eloChanges = calculateEloChanges(players, rankings);
+    const eloChanges = calculateEloChanges(players, normalizedScores);
 
     // Update ELOs, record history, mark game completed — all in one batch
     const eloStatements = players.flatMap((player) => {
