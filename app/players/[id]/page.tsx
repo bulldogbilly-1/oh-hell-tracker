@@ -24,8 +24,11 @@ interface Player {
 interface Stats {
   games: number;
   wins: number;
+  winRate: number;
   avgBid: number;
   accuracy: number;
+  overbidPct: number;
+  underbidPct: number;
   avgPlace: number;
   elo: number;
 }
@@ -125,7 +128,10 @@ export default function PlayerDetailPage() {
         {[
           { label: "Games", value: stats.games },
           { label: "Wins", value: stats.wins },
+          { label: "Win Rate", value: `${stats.winRate}%` },
           { label: "Accuracy", value: `${stats.accuracy}%` },
+          { label: "Overbid %", value: `${stats.overbidPct}%` },
+          { label: "Underbid %", value: `${stats.underbidPct}%` },
           {
             label: "Avg Bid",
             value: stats.avgBid ? stats.avgBid.toFixed(1) : "—",

@@ -75,6 +75,8 @@ export async function GET(
         SELECT
           COUNT(*) as total_bids,
           SUM(CASE WHEN b.bid = t.tricks_won THEN 1 ELSE 0 END) as exact_bids,
+          SUM(CASE WHEN b.bid > t.tricks_won THEN 1 ELSE 0 END) as overbids,
+          SUM(CASE WHEN b.bid < t.tricks_won THEN 1 ELSE 0 END) as underbids,
           AVG(b.bid) as avg_bid
         FROM bids b
         JOIN tricks t ON t.round_id = b.round_id AND t.player_id = b.player_id
@@ -88,6 +90,8 @@ export async function GET(
     const bidStats = bidStatsResult.rows[0] as unknown as {
       total_bids: number;
       exact_bids: number;
+      overbids: number;
+      underbids: number;
       avg_bid: number;
     };
 
@@ -95,6 +99,15 @@ export async function GET(
       bidStats.total_bids > 0
         ? bidStats.exact_bids / bidStats.total_bids
         : 0;
+    const overbidPct =
+      bidStats.total_bids > 0
+        ? Math.round((bidStats.overbids / bidStats.total_bids) * 100)
+        : 0;
+    const underbidPct =
+      bidStats.total_bids > 0
+        ? Math.round((bidStats.underbids / bidStats.total_bids) * 100)
+        : 0;
+    const winRate = gamesCount > 0 ? Math.round((wins / gamesCount) * 100) : 0;
 
     // ELO history
     const eloHistoryResult = await db.execute({
@@ -116,8 +129,11 @@ export async function GET(
       stats: {
         games: gamesCount,
         wins,
+        winRate,
         avgBid: bidStats.avg_bid || 0,
         accuracy: Math.round(accuracy * 100),
+        overbidPct,
+        underbidPct,
         avgPlace,
         elo: (player as unknown as { elo: number }).elo,
       },
