@@ -27,8 +27,6 @@ export async function POST(
     // Upload to Vercel Blob, overwriting any previous avatar for this player
     const blob = await put(`avatars/player-${playerId}`, file, {
       access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true,
     });
 
     // Save URL to database
