@@ -104,7 +104,7 @@ export default function PlayerDetailPage() {
       const d = await res.json();
       if (res.ok) {
         setData((prev) =>
-          prev ? { ...prev, player: { ...prev.player, avatar_url: d.avatarUrl } } : prev
+          prev ? { ...prev, player: { ...prev.player, avatar_url: `${d.avatarUrl}?t=${Date.now()}` } } : prev
         );
       } else {
         setUploadError(d.error || `Error ${res.status}`);
