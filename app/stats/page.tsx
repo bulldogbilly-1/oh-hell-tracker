@@ -65,6 +65,7 @@ export default function StatsPage() {
           name: p.name,
           color: p.color,
           elo: p.elo,
+          avatar_url: p.avatar_url,
           games: gamesCount,
           wins: 0,
           winRate: 0,
