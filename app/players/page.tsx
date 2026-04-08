@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Users } from "lucide-react";
 import { useAdmin } from "../context/AdminContext";
+import PlayerAvatar from "../components/PlayerAvatar";
 
 interface Player {
   id: number;
   name: string;
   color: string;
   elo: number;
+  avatar_url?: string | null;
 }
 
 export default function PlayersPage() {
@@ -139,12 +141,7 @@ export default function PlayersPage() {
           {players.map((p) => (
             <Link key={p.id} href={`/players/${p.id}`}>
               <div className="flex items-center gap-3 p-3 bg-[#161b16] border border-[#1f2d1f] rounded-xl hover:border-[#10b981]/40 transition-all active:scale-[0.98]">
-                <div
-                  className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white text-lg"
-                  style={{ backgroundColor: p.color }}
-                >
-                  {p.name.charAt(0).toUpperCase()}
-                </div>
+                <PlayerAvatar name={p.name} color={p.color} avatarUrl={p.avatar_url} size="w-11 h-11" fontSize="text-lg font-bold" />
                 <div className="flex-1">
                   <div className="font-semibold">{p.name}</div>
                 </div>

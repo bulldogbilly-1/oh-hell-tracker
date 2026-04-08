@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Zap, AlertTriangle } from "lucide-react";
+import { ChevronLeft, Zap, AlertTriangle, Camera } from "lucide-react";
+import { useRef } from "react";
+import { useAdmin } from "../../context/AdminContext";
+import PlayerAvatar from "../../components/PlayerAvatar";
 import {
   LineChart,
   Line,
@@ -19,6 +22,7 @@ interface Player {
   name: string;
   color: string;
   elo: number;
+  avatar_url?: string | null;
 }
 
 interface Stats {
@@ -57,8 +61,11 @@ interface PlayerData {
 export default function PlayerDetailPage() {
   const params = useParams();
   const playerId = params.id as string;
+  const { isAdmin } = useAdmin();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [data, setData] = useState<PlayerData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetch(`/api/players/${playerId}`)
@@ -80,6 +87,29 @@ export default function PlayerDetailPage() {
   if (!data) {
     return <div className="p-4 text-center text-gray-500">Player not found</div>;
   }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch(`/api/players/${playerId}/avatar`, {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setData((prev) =>
+          prev ? { ...prev, player: { ...prev.player, avatar_url: d.avatarUrl } } : prev
+        );
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const { player, stats, eloHistory, scoutingReport } = data;
 
@@ -109,17 +139,37 @@ export default function PlayerDetailPage() {
 
       {/* Player card */}
       <div className="bg-[#161b16] border border-[#1f2d1f] rounded-2xl p-5 mb-4 flex items-center gap-4">
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center font-black text-2xl text-white"
-          style={{ backgroundColor: player.color }}
-        >
-          {player.name.charAt(0).toUpperCase()}
+        <div className="relative">
+          <PlayerAvatar
+            name={player.name}
+            color={player.color}
+            avatarUrl={player.avatar_url}
+            size="w-16 h-16"
+            fontSize="text-2xl font-black"
+          />
+          {isAdmin && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity"
+            >
+              <Camera size={20} className="text-white" />
+            </button>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarUpload}
+          />
         </div>
         <div>
           <h2 className="text-2xl font-bold">{player.name}</h2>
           <p className="text-[#10b981] font-bold text-lg">
             {Math.round(player.elo)} ELO
           </p>
+          {uploading && <p className="text-xs text-gray-500 mt-0.5">Uploading...</p>}
         </div>
       </div>
 

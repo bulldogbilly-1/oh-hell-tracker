@@ -79,6 +79,7 @@ async function initializeClient(): Promise<Client> {
   for (const migration of [
     "ALTER TABLE games ADD COLUMN min_cards INTEGER NOT NULL DEFAULT 1",
     "ALTER TABLE games ADD COLUMN max_cards INTEGER NOT NULL DEFAULT 7",
+    "ALTER TABLE players ADD COLUMN avatar_url TEXT",
   ]) {
     try {
       await db.execute(migration);

@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
+import PlayerAvatar from "../components/PlayerAvatar";
 
 interface Player {
   id: number;
   name: string;
   color: string;
   elo: number;
+  avatar_url?: string | null;
 }
 
 interface EloChange {
@@ -85,12 +87,7 @@ export default function RankingsPage() {
             <Link href={`/players/${topPlayer.id}`}>
               <div className="bg-gradient-to-br from-yellow-900/40 to-[#161b16] border border-yellow-500/30 rounded-2xl p-5 mb-4 flex items-center gap-4 hover:border-yellow-500/50 transition-all">
                 <div className="relative">
-                  <div
-                    className="w-16 h-16 rounded-full flex items-center justify-center font-black text-2xl text-white"
-                    style={{ backgroundColor: topPlayer.color }}
-                  >
-                    {topPlayer.name.charAt(0).toUpperCase()}
-                  </div>
+                  <PlayerAvatar name={topPlayer.name} color={topPlayer.color} avatarUrl={topPlayer.avatar_url} size="w-16 h-16" fontSize="text-2xl font-black" />
                   <div className="absolute -top-1 -right-1 bg-yellow-500 text-black text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
                     #1
                   </div>
@@ -135,12 +132,7 @@ export default function RankingsPage() {
                     >
                       #{index + 1}
                     </span>
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
-                      style={{ backgroundColor: player.color }}
-                    >
-                      {player.name.charAt(0).toUpperCase()}
-                    </div>
+                    <PlayerAvatar name={player.name} color={player.color} avatarUrl={player.avatar_url} size="w-9 h-9" />
                     <div className="flex-1">
                       <div className="font-semibold text-sm">{player.name}</div>
                     </div>

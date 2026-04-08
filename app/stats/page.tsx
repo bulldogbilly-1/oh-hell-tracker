@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BarChart2, ChevronUp, ChevronDown } from "lucide-react";
+import PlayerAvatar from "../components/PlayerAvatar";
 
 interface Player {
   id: number;
   name: string;
   color: string;
   elo: number;
+  avatar_url?: string | null;
 }
 
 interface GameSummary {
@@ -23,6 +25,7 @@ interface PlayerStat {
   name: string;
   color: string;
   elo: number;
+  avatar_url?: string | null;
   games: number;
   wins: number;
   winRate: number;
@@ -189,12 +192,7 @@ export default function StatsPage() {
                   <div className="flex items-center gap-1 bg-[#161b16] border border-[#1f2d1f] rounded-xl px-3 py-2.5 hover:border-[#10b981]/30 transition-all active:scale-[0.98]">
                     <div className="w-40 shrink-0 flex items-center gap-2">
                       <span className="text-xs text-gray-600 w-4">{i + 1}</span>
-                      <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                        style={{ backgroundColor: p.color }}
-                      >
-                        {p.name.charAt(0).toUpperCase()}
-                      </div>
+                      <PlayerAvatar name={p.name} color={p.color} avatarUrl={p.avatar_url} size="w-7 h-7" fontSize="text-xs font-bold" />
                       <span className="text-sm font-semibold truncate max-w-[80px]">
                         {p.name}
                       </span>

@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Medal } from "lucide-react";
+import PlayerAvatar from "../components/PlayerAvatar";
 
 interface Player {
   id: number;
   name: string;
   color: string;
   elo: number;
+  avatar_url?: string | null;
 }
 
 interface Achievement {
@@ -145,12 +147,7 @@ export default function AchievementsPage() {
               <div key={player.id} className="mb-5">
                 <Link href={`/players/${player.id}`}>
                   <div className="flex items-center gap-3 mb-3">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm"
-                      style={{ backgroundColor: player.color }}
-                    >
-                      {player.name.charAt(0).toUpperCase()}
-                    </div>
+                    <PlayerAvatar name={player.name} color={player.color} avatarUrl={player.avatar_url} size="w-8 h-8" />
                     <span className="font-semibold">{player.name}</span>
                     <span className="text-xs text-gray-500 ml-auto">
                       {unlocked}/{ACHIEVEMENTS.length}

@@ -13,12 +13,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAdmin } from "../../context/AdminContext";
+import PlayerAvatar from "../../components/PlayerAvatar";
 
 interface Player {
   id: number;
   name: string;
   color: string;
   elo: number;
+  avatar_url?: string | null;
 }
 
 interface Round {
@@ -374,12 +376,7 @@ export default function GamePage() {
                   >
                     #{s.rank}
                   </span>
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white"
-                    style={{ backgroundColor: player?.color || "#888" }}
-                  >
-                    {s.playerName.charAt(0).toUpperCase()}
-                  </div>
+                  <PlayerAvatar name={s.playerName} color={player?.color || "#888"} avatarUrl={player?.avatar_url} size="w-10 h-10" />
                   <div className="flex-1">
                     <div className="font-semibold">{s.playerName}</div>
                     <div className="text-xs text-gray-500">
@@ -423,12 +420,7 @@ export default function GamePage() {
                   <span className="text-xl font-black text-gray-500">
                     #{i + 1}
                   </span>
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white"
-                    style={{ backgroundColor: player.color }}
-                  >
-                    {player.name.charAt(0).toUpperCase()}
-                  </div>
+                  <PlayerAvatar name={player.name} color={player.color} avatarUrl={player.avatar_url} size="w-10 h-10" />
                   <div className="flex-1">
                     <div className="font-semibold">{player.name}</div>
                     <div className="text-xs text-gray-500">
@@ -529,12 +521,7 @@ export default function GamePage() {
             return (
               <div key={s.playerId} className="flex items-center gap-2">
                 <span className="text-xs text-gray-600 w-3">{i + 1}</span>
-                <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                  style={{ backgroundColor: player.color }}
-                >
-                  {player.name.charAt(0).toUpperCase()}
-                </div>
+                <PlayerAvatar name={player.name} color={player.color} avatarUrl={player.avatar_url} size="w-6 h-6" fontSize="text-xs font-bold" />
                 <span className="flex-1 text-sm">{player.name}</span>
                 <span className="font-bold text-[#10b981]">
                   {s.totalScore}
@@ -620,12 +607,7 @@ export default function GamePage() {
                       : "border-[#2d3d2d] bg-[#0f160f]"
                   }`}
                 >
-                  <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
-                    style={{ backgroundColor: player.color }}
-                  >
-                    {player.name.charAt(0).toUpperCase()}
-                  </div>
+                  <PlayerAvatar name={player.name} color={player.color} avatarUrl={player.avatar_url} size="w-9 h-9" />
                   <div className="flex-1">
                     <div className="text-sm font-semibold">{player.name}</div>
                     {isDealer && (
@@ -692,12 +674,7 @@ export default function GamePage() {
                   key={pid}
                   className="flex items-center gap-3 p-3 rounded-xl border border-[#2d3d2d] bg-[#0f160f]"
                 >
-                  <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
-                    style={{ backgroundColor: player.color }}
-                  >
-                    {player.name.charAt(0).toUpperCase()}
-                  </div>
+                  <PlayerAvatar name={player.name} color={player.color} avatarUrl={player.avatar_url} size="w-9 h-9" />
                   <div className="flex-1">
                     <div className="text-sm font-semibold">{player.name}</div>
                     <div className="text-xs text-gray-500">
