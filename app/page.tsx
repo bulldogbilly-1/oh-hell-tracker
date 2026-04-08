@@ -4,11 +4,13 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Plus, Spade, Trash2 } from "lucide-react";
 import { useAdmin } from "./context/AdminContext";
+import PlayerAvatar from "./components/PlayerAvatar";
 
 interface GamePlayer {
   id: number;
   name: string;
   color: string;
+  avatar_url?: string | null;
 }
 
 interface Game {
@@ -83,12 +85,7 @@ function GameCard({
           <div className="flex items-center gap-2 flex-wrap">
             {game.players.map((p) => (
               <div key={p.id} className="flex items-center gap-1.5">
-                <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                  style={{ backgroundColor: p.color }}
-                >
-                  {p.name.charAt(0).toUpperCase()}
-                </div>
+                <PlayerAvatar name={p.name} color={p.color} avatarUrl={p.avatar_url} size="w-6 h-6" fontSize="text-[10px] font-bold" />
                 <span className="text-sm text-gray-300">{p.name}</span>
               </div>
             ))}
