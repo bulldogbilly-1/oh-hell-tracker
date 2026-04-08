@@ -39,6 +39,7 @@ export async function POST(
     return NextResponse.json({ avatarUrl: blob.url });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Failed to upload avatar" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: `Failed to upload avatar: ${message}` }, { status: 500 });
   }
 }
