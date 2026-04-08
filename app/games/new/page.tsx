@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Check, Minus, Plus } from "lucide-react";
 import Link from "next/link";
 import { useAdmin } from "../../context/AdminContext";
+import PlayerAvatar from "../../components/PlayerAvatar";
 
 interface Player {
   id: number;
   name: string;
   color: string;
   elo: number;
+  avatar_url?: string | null;
 }
 
 export default function NewGamePage() {
@@ -106,12 +108,7 @@ export default function NewGamePage() {
                       : "border-[#1f2d1f] bg-[#161b16] hover:border-[#2d3d2d]"
                   }`}
                 >
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm"
-                    style={{ backgroundColor: p.color }}
-                  >
-                    {p.name.charAt(0).toUpperCase()}
-                  </div>
+                  <PlayerAvatar name={p.name} color={p.color} avatarUrl={p.avatar_url} size="w-10 h-10" />
                   <div className="flex-1 text-left">
                     <div className="font-semibold text-sm">{p.name}</div>
                     <div className="text-xs text-gray-500">ELO {Math.round(p.elo)}</div>
@@ -200,12 +197,7 @@ export default function NewGamePage() {
               return (
                 <div key={pid} className="flex items-center gap-2">
                   <span className="text-xs text-gray-600 w-4">{i + 1}.</span>
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                    style={{ backgroundColor: p.color }}
-                  >
-                    {p.name.charAt(0)}
-                  </div>
+                  <PlayerAvatar name={p.name} color={p.color} avatarUrl={p.avatar_url} size="w-6 h-6" fontSize="text-xs font-bold" />
                   <span className="text-sm">{p.name}</span>
                   {i === 0 && (
                     <span className="text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded ml-1">
