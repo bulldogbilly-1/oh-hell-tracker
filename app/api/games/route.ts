@@ -26,7 +26,7 @@ export async function GET() {
         const players = await Promise.all(
           playerIds.map((pid) =>
             db
-              .execute({ sql: "SELECT id, name, color FROM players WHERE id = ?", args: [pid] })
+              .execute({ sql: "SELECT id, name, color, avatar_url FROM players WHERE id = ?", args: [pid] })
               .then((r) => r.rows[0])
           )
         );
