@@ -66,6 +66,7 @@ export default function PlayerDetailPage() {
   const [data, setData] = useState<PlayerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   useEffect(() => {
     fetch(`/api/players/${playerId}`)
@@ -92,6 +93,7 @@ export default function PlayerDetailPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setUploadError("");
     const formData = new FormData();
     formData.append("file", file);
     try {
@@ -99,12 +101,16 @@ export default function PlayerDetailPage() {
         method: "POST",
         body: formData,
       });
+      const d = await res.json();
       if (res.ok) {
-        const d = await res.json();
         setData((prev) =>
           prev ? { ...prev, player: { ...prev.player, avatar_url: d.avatarUrl } } : prev
         );
+      } else {
+        setUploadError(d.error || `Error ${res.status}`);
       }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -170,6 +176,7 @@ export default function PlayerDetailPage() {
             {Math.round(player.elo)} ELO
           </p>
           {uploading && <p className="text-xs text-gray-500 mt-0.5">Uploading...</p>}
+          {uploadError && <p className="text-xs text-red-400 mt-0.5">{uploadError}</p>}
         </div>
       </div>
 
