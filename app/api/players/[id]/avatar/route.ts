@@ -31,14 +31,17 @@ export async function POST(
       allowOverwrite: true,
     });
 
+    // Append timestamp to bust CDN/browser cache on overwrites
+    const avatarUrl = `${blob.url}?t=${Date.now()}`;
+
     // Save URL to database
     const db = await getDb();
     await db.execute({
       sql: "UPDATE players SET avatar_url = ? WHERE id = ?",
-      args: [blob.url, playerId],
+      args: [avatarUrl, playerId],
     });
 
-    return NextResponse.json({ avatarUrl: blob.url });
+    return NextResponse.json({ avatarUrl });
   } catch (error) {
     console.error(error);
     const message = error instanceof Error ? error.message : "Unknown error";
