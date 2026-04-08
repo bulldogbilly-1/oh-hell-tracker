@@ -28,6 +28,7 @@ export async function POST(
     const blob = await put(`avatars/player-${playerId}`, file, {
       access: "public",
       addRandomSuffix: false,
+      allowOverwrite: true,
     });
 
     // Save URL to database
