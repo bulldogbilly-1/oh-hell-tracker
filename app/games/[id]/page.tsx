@@ -727,8 +727,8 @@ export default function GamePage() {
                   </div>
                 </div>
 
-                {/* Bid tiles */}
-                <div className="flex flex-wrap gap-2">
+                {/* Bid tiles — key changes per player so DOM is fresh (no lingering focus/highlight) */}
+                <div key={biddingPlayerIndex} className="grid grid-cols-2 gap-2">
                   {Array.from(
                     { length: currentRound.num_cards + 1 },
                     (_, i) => {
@@ -738,7 +738,7 @@ export default function GamePage() {
                           key={i}
                           onClick={() => handleSelectBid(i)}
                           disabled={isForbidden || submitting}
-                          className={`w-12 h-12 rounded-xl text-lg font-bold transition-all active:scale-95 ${
+                          className={`w-full py-5 rounded-2xl text-2xl font-bold transition-all active:scale-95 ${
                             isForbidden
                               ? "bg-[#1a1a1a] border border-red-500/20 text-red-500/30 cursor-not-allowed"
                               : "bg-[#161b16] border border-[#2d3d2d] hover:border-[#10b981] hover:bg-[#10b981]/10 hover:text-[#10b981]"

@@ -43,9 +43,14 @@ export default function NewGamePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Drag state
-  const dragIndex = useRef<number | null>(null);
+  // Drag state (mouse)
+  const mouseDragIndex = useRef<number | null>(null);
+  // Drag state (touch)
+  const touchDragIndex = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+
+  // List ref for non-passive touchmove
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/players")
@@ -53,15 +58,80 @@ export default function NewGamePage() {
       .then(setPlayers);
   }, []);
 
+  // Register non-passive touchmove so we can preventDefault (stop page scroll while dragging)
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (touchDragIndex.current === null) return;
+      e.preventDefault();
+
+      const touch = e.touches[0];
+      const items = list.querySelectorAll<HTMLElement>("[data-drag-index]");
+      let over: number | null = null;
+      items.forEach((item) => {
+        const rect = item.getBoundingClientRect();
+        if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+          over = parseInt(item.getAttribute("data-drag-index") ?? "0");
+        }
+      });
+      setDragOver(over);
+    };
+
+    list.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => list.removeEventListener("touchmove", onTouchMove);
+  }, []);
+
+  const reorder = (from: number, to: number) => {
+    setSeatOrder((prev) => {
+      const arr = [...prev];
+      const [removed] = arr.splice(from, 1);
+      arr.splice(to, 0, removed);
+      return arr;
+    });
+  };
+
+  // Mouse drag handlers
+  const handleMouseDragStart = (index: number) => {
+    mouseDragIndex.current = index;
+  };
+  const handleMouseDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOver(index);
+  };
+  const handleMouseDrop = (index: number) => {
+    if (mouseDragIndex.current !== null && mouseDragIndex.current !== index) {
+      reorder(mouseDragIndex.current, index);
+    }
+    mouseDragIndex.current = null;
+    setDragOver(null);
+  };
+  const handleMouseDragEnd = () => {
+    mouseDragIndex.current = null;
+    setDragOver(null);
+  };
+
+  // Touch drag handlers
+  const handleTouchStart = (index: number) => {
+    touchDragIndex.current = index;
+  };
+  const handleTouchEnd = () => {
+    if (
+      touchDragIndex.current !== null &&
+      dragOver !== null &&
+      touchDragIndex.current !== dragOver
+    ) {
+      reorder(touchDragIndex.current, dragOver);
+    }
+    touchDragIndex.current = null;
+    setDragOver(null);
+  };
+
   const togglePlayer = (id: number) => {
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
-  };
-
-  const goToStep2 = () => {
-    setSeatOrder([...selected]);
-    setStep(2);
   };
 
   const moveUp = (index: number) => {
@@ -82,28 +152,9 @@ export default function NewGamePage() {
     });
   };
 
-  const handleDragStart = (index: number) => {
-    dragIndex.current = index;
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    setDragOver(index);
-  };
-
-  const handleDrop = (index: number) => {
-    if (dragIndex.current === null || dragIndex.current === index) {
-      setDragOver(null);
-      return;
-    }
-    setSeatOrder((prev) => {
-      const arr = [...prev];
-      const [removed] = arr.splice(dragIndex.current!, 1);
-      arr.splice(index, 0, removed);
-      return arr;
-    });
-    dragIndex.current = null;
-    setDragOver(null);
+  const goToStep2 = () => {
+    setSeatOrder([...selected]);
+    setStep(2);
   };
 
   const numRounds = 2 * (maxCards - minCards) + 1;
@@ -133,7 +184,6 @@ export default function NewGamePage() {
   if (step === 1) {
     return (
       <div className="p-4">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-1 pt-2">
           <Link href="/" className="text-gray-400 hover:text-white">
             <ChevronLeft size={24} />
@@ -186,9 +236,7 @@ export default function NewGamePage() {
                   </div>
                   {isSelected ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">
-                        #{seatNum + 1}
-                      </span>
+                      <span className="text-xs text-gray-400">#{seatNum + 1}</span>
                       <div className="w-5 h-5 rounded-full bg-[#10b981] flex items-center justify-center">
                         <Check size={12} />
                       </div>
@@ -216,7 +264,6 @@ export default function NewGamePage() {
   // ── Step 2: Seating Order + Settings ───────────────────────────────────────
   return (
     <div className="p-4">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-1 pt-2">
         <button
           onClick={() => setStep(1)}
@@ -236,31 +283,35 @@ export default function NewGamePage() {
         Player Order
       </h2>
       <p className="text-xs text-gray-500 mb-3">
-        Drag to reorder · first player deals first
+        Drag or use arrows to reorder · first player deals first
       </p>
 
-      <div className="space-y-2 mb-6">
+      <div ref={listRef} className="space-y-2 mb-6">
         {seatOrder.map((pid, index) => {
           const p = players.find((pl) => pl.id === pid);
           if (!p) return null;
+          const isOver = dragOver === index;
           return (
             <div
               key={pid}
+              data-drag-index={index}
               draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDrop={() => handleDrop(index)}
+              onDragStart={() => handleMouseDragStart(index)}
+              onDragOver={(e) => handleMouseDragOver(e, index)}
+              onDrop={() => handleMouseDrop(index)}
               onDragLeave={() => setDragOver(null)}
-              onDragEnd={() => setDragOver(null)}
-              className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                dragOver === index
-                  ? "border-[#10b981]/60 bg-[#10b981]/10 scale-[1.01]"
+              onDragEnd={handleMouseDragEnd}
+              onTouchStart={() => handleTouchStart(index)}
+              onTouchEnd={handleTouchEnd}
+              className={`flex items-center gap-3 p-3 rounded-xl border transition-all select-none ${
+                isOver
+                  ? "border-[#10b981]/60 bg-[#10b981]/10"
                   : "border-[#1f2d1f] bg-[#161b16]"
               }`}
             >
               <GripVertical
-                size={16}
-                className="text-gray-600 cursor-grab active:cursor-grabbing flex-shrink-0"
+                size={18}
+                className="text-gray-500 flex-shrink-0 touch-none"
               />
               <span className="text-sm text-gray-500 w-4 flex-shrink-0">
                 {index + 1}.
@@ -274,9 +325,7 @@ export default function NewGamePage() {
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-sm">{p.name}</div>
                 {index === 0 && (
-                  <div className="text-[10px] text-amber-400">
-                    First Dealer
-                  </div>
+                  <div className="text-[10px] text-amber-400">First Dealer</div>
                 )}
               </div>
               <div className="flex flex-col gap-1">
@@ -307,11 +356,8 @@ export default function NewGamePage() {
         </h2>
         <div className="bg-[#161b16] border border-[#1f2d1f] rounded-xl p-4">
           <div className="grid grid-cols-2 gap-4 mb-3">
-            {/* Min Cards */}
             <div>
-              <p className="text-xs text-gray-500 text-center mb-2">
-                Min Cards
-              </p>
+              <p className="text-xs text-gray-500 text-center mb-2">Min Cards</p>
               <div className="flex items-center justify-between gap-2">
                 <button
                   onClick={() => setMinCards((v) => Math.max(1, v - 1))}
@@ -319,9 +365,7 @@ export default function NewGamePage() {
                 >
                   <Minus size={14} />
                 </button>
-                <div className="text-2xl font-bold text-[#10b981]">
-                  {minCards}
-                </div>
+                <div className="text-2xl font-bold text-[#10b981]">{minCards}</div>
                 <button
                   onClick={() => setMinCards((v) => Math.min(maxCards, v + 1))}
                   className="w-8 h-8 rounded-lg bg-[#0f160f] border border-[#2d3d2d] flex items-center justify-center hover:border-[#10b981]/40"
@@ -330,12 +374,8 @@ export default function NewGamePage() {
                 </button>
               </div>
             </div>
-
-            {/* Max Cards */}
             <div>
-              <p className="text-xs text-gray-500 text-center mb-2">
-                Max Cards
-              </p>
+              <p className="text-xs text-gray-500 text-center mb-2">Max Cards</p>
               <div className="flex items-center justify-between gap-2">
                 <button
                   onClick={() => setMaxCards((v) => Math.max(minCards, v - 1))}
@@ -343,13 +383,9 @@ export default function NewGamePage() {
                 >
                   <Minus size={14} />
                 </button>
-                <div className="text-2xl font-bold text-[#10b981]">
-                  {maxCards}
-                </div>
+                <div className="text-2xl font-bold text-[#10b981]">{maxCards}</div>
                 <button
-                  onClick={() =>
-                    setMaxCards((v) => Math.min(13, v + 1))
-                  }
+                  onClick={() => setMaxCards((v) => Math.min(13, v + 1))}
                   className="w-8 h-8 rounded-lg bg-[#0f160f] border border-[#2d3d2d] flex items-center justify-center hover:border-[#10b981]/40"
                 >
                   <Plus size={14} />
@@ -357,7 +393,6 @@ export default function NewGamePage() {
               </div>
             </div>
           </div>
-
           <div className="text-center text-xs text-gray-500">
             {numRounds} rounds total ({minCards} → {maxCards} → {minCards})
           </div>
