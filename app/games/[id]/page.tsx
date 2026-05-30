@@ -268,6 +268,18 @@ export default function GamePage() {
     setBiddingPlayerIndex((prev) => prev - 1);
   };
 
+  // Jump back to any already-confirmed bidder and clear from that point forward
+  const handleJumpToBidder = (index: number) => {
+    setBidValues((prev) => {
+      const next = { ...prev };
+      biddingOrder.slice(index).forEach((p) => {
+        if (p) delete next[p.id];
+      });
+      return next;
+    });
+    setBiddingPlayerIndex(index);
+  };
+
   // ── Tricks submission ───────────────────────────────────────────────────────
   const handleSubmitTricks = async () => {
     if (!currentRound) return;
@@ -735,7 +747,7 @@ export default function GamePage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="grid grid-cols-2 gap-2">
               {suits.map((suit) => (
                 <button
                   key={suit.key}
@@ -747,13 +759,6 @@ export default function GamePage() {
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => pickTrump("No Trump")}
-              className="w-full py-4 rounded-2xl border border-[#2d3d2d] bg-[#0f160f] hover:border-[#10b981] hover:bg-[#10b981]/10 flex items-center justify-center gap-2 transition-all active:scale-95"
-            >
-              <span className="text-lg font-bold text-gray-300">NT</span>
-              <span className="text-sm text-gray-400">No Trump</span>
-            </button>
           </div>
         );
       })()}
@@ -771,15 +776,16 @@ export default function GamePage() {
               Bidding
             </h2>
 
-            {/* Confirmed bids */}
+            {/* Confirmed bids — tap any chip to jump back and change that bid */}
             {confirmedBidders.length > 0 && (
               <div className="mb-4 flex flex-wrap gap-2">
-                {confirmedBidders.map((p) => {
+                {confirmedBidders.map((p, idx) => {
                   if (!p) return null;
                   return (
-                    <div
+                    <button
                       key={p.id}
-                      className="flex items-center gap-1.5 bg-[#0f160f] border border-[#2d3d2d] rounded-lg px-2.5 py-1.5"
+                      onClick={() => handleJumpToBidder(idx)}
+                      className="flex items-center gap-1.5 bg-[#0f160f] border border-[#2d3d2d] rounded-lg px-2.5 py-1.5 hover:border-amber-400/50 hover:bg-amber-400/5 transition-all active:scale-95"
                     >
                       <PlayerAvatar
                         name={p.name}
@@ -792,7 +798,7 @@ export default function GamePage() {
                       <span className="text-xs font-bold text-white">
                         {bidValues[p.id]}
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -852,17 +858,6 @@ export default function GamePage() {
                   })}
                 </div>
               </div>
-            )}
-
-            {/* Back button */}
-            {biddingPlayerIndex > 0 && (
-              <button
-                onClick={handleBidBack}
-                disabled={submitting}
-                className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors"
-              >
-                <RotateCcw size={12} /> Back to {biddingOrder[biddingPlayerIndex - 1]?.name}
-              </button>
             )}
 
             {submitting && (
