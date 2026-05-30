@@ -90,6 +90,59 @@ export async function GET(
       })
     );
 
+    // ── Trump selector ──────────────────────────────────────────────────────
+    // For round 1: null (random). For round N>1: the player who scored highest
+    // in round N-1. Tiebreaker: recurse to N-2, N-3, … then seating position
+    // (left of dealer first = best, dealer = worst — same as bidding order).
+    let trumpSelectorId: number | null = null;
+
+    if (currentRound && game.current_round > 1) {
+      // Per-round scores for all completed rounds
+      const roundScoresResult = await db.execute({
+        sql: `
+          SELECT r.round_number, t.player_id, t.score
+          FROM tricks t
+          JOIN rounds r ON r.id = t.round_id
+          WHERE r.game_id = ? AND r.phase = 'completed'
+          ORDER BY r.round_number
+        `,
+        args: [gameId],
+      });
+
+      const roundScoreMap: Record<number, Record<number, number>> = {};
+      for (const row of roundScoresResult.rows as unknown as {
+        round_number: number;
+        player_id: number;
+        score: number;
+      }[]) {
+        if (!roundScoreMap[row.round_number]) roundScoreMap[row.round_number] = {};
+        roundScoreMap[row.round_number][row.player_id] = row.score;
+      }
+
+      // Seating tiebreaker: left-of-dealer first, dealer last (= bidding order)
+      const di = currentRound.dealer_index;
+      const biddingOrderIds = [
+        ...playerIds.slice(di + 1),
+        ...playerIds.slice(0, di + 1),
+      ];
+
+      function resolveSelector(candidates: number[], checkRound: number): number {
+        if (checkRound < 1 || Object.keys(roundScoreMap).length === 0) {
+          // Seating tiebreaker
+          return biddingOrderIds.find((id) => candidates.includes(id)) ?? candidates[0];
+        }
+        const roundData = roundScoreMap[checkRound];
+        if (!roundData) return resolveSelector(candidates, checkRound - 1);
+
+        const maxScore = Math.max(...candidates.map((id) => roundData[id] ?? 0));
+        const top = candidates.filter((id) => (roundData[id] ?? 0) === maxScore);
+        if (top.length === 1) return top[0];
+        return resolveSelector(top, checkRound - 1);
+      }
+
+      trumpSelectorId = resolveSelector(playerIds, game.current_round - 1);
+    }
+
     return NextResponse.json({
       game,
       players,
@@ -98,6 +151,7 @@ export async function GET(
       bids,
       tricks,
       scores,
+      trumpSelectorId,
     });
   } catch (error) {
     console.error(error);

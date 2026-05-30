@@ -49,6 +49,7 @@ interface GameData {
   bids: { player_id: number; bid: number }[];
   tricks: { player_id: number; tricks_won: number; score: number }[];
   scores: { playerId: number; totalScore: number }[];
+  trumpSelectorId: number | null;
 }
 
 const SUIT_SYMBOLS: Record<string, string> = {
@@ -115,6 +116,7 @@ export default function GamePage() {
   const [loading, setLoading] = useState(true);
 
   // Bidding state
+  const [localPhase, setLocalPhase] = useState<"trump" | "bidding">("trump");
   const [biddingPlayerIndex, setBiddingPlayerIndex] = useState(0);
   const [bidValues, setBidValues] = useState<Record<number, number>>({});
   const [selectedTrump, setSelectedTrump] = useState<string>("");
@@ -149,6 +151,7 @@ export default function GamePage() {
         setBidValues({});
         setBiddingPlayerIndex(0);
         setSelectedTrump(d.currentRound.trump_suit || "");
+        setLocalPhase("trump");
       }
 
       if (d.currentRound?.phase === "scoring") {
@@ -685,8 +688,78 @@ export default function GamePage() {
         </div>
       )}
 
+      {/* ── TRUMP SELECTION STEP ──────────────────────────────────────────── */}
+      {isAdmin && currentRound?.phase === "bidding" && localPhase === "trump" && (() => {
+        const selectorPlayer = data.trumpSelectorId
+          ? players.find((p) => p.id === data.trumpSelectorId)
+          : null;
+
+        const suits = [
+          { key: "Spades",   symbol: "♠", color: "text-blue-300",  name: "Spades"   },
+          { key: "Hearts",   symbol: "♥", color: "text-red-400",   name: "Hearts"   },
+          { key: "Diamonds", symbol: "♦", color: "text-red-400",   name: "Diamonds" },
+          { key: "Clubs",    symbol: "♣", color: "text-blue-300",  name: "Clubs"    },
+        ];
+
+        const pickTrump = (suit: string) => {
+          setSelectedTrump(suit);
+          setLocalPhase("bidding");
+        };
+
+        return (
+          <div className="bg-[#161b16] border border-[#1f2d1f] rounded-xl p-4">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              Trump Selection
+            </h2>
+
+            {selectorPlayer ? (
+              <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mb-4">
+                <PlayerAvatar
+                  name={selectorPlayer.name}
+                  color={selectorPlayer.color}
+                  avatarUrl={selectorPlayer.avatar_url}
+                  size="w-10 h-10"
+                />
+                <div>
+                  <div className="font-bold text-sm">{selectorPlayer.name} picks trump</div>
+                  <div className="text-xs text-gray-500">Highest scorer last round</div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-[#0f160f] border border-[#2d3d2d] rounded-xl p-3 mb-4 flex items-center gap-2">
+                <span className="text-lg">🎲</span>
+                <div>
+                  <div className="text-sm font-semibold text-gray-200">Random pick</div>
+                  <div className="text-xs text-gray-500">First round — any suit!</div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              {suits.map((suit) => (
+                <button
+                  key={suit.key}
+                  onClick={() => pickTrump(suit.key)}
+                  className="w-full py-5 rounded-2xl border border-[#2d3d2d] bg-[#0f160f] hover:border-[#10b981] hover:bg-[#10b981]/10 flex flex-col items-center gap-1 transition-all active:scale-95"
+                >
+                  <span className={`text-3xl ${suit.color}`}>{suit.symbol}</span>
+                  <span className="text-xs text-gray-400">{suit.name}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => pickTrump("No Trump")}
+              className="w-full py-4 rounded-2xl border border-[#2d3d2d] bg-[#0f160f] hover:border-[#10b981] hover:bg-[#10b981]/10 flex items-center justify-center gap-2 transition-all active:scale-95"
+            >
+              <span className="text-lg font-bold text-gray-300">NT</span>
+              <span className="text-sm text-gray-400">No Trump</span>
+            </button>
+          </div>
+        );
+      })()}
+
       {/* ── BIDDING PHASE ─────────────────────────────────────────────────── */}
-      {isAdmin && currentRound?.phase === "bidding" && (() => {
+      {isAdmin && currentRound?.phase === "bidding" && localPhase === "bidding" && (() => {
         const currentBidder = biddingOrder[biddingPlayerIndex];
         const isDealer = biddingPlayerIndex === biddingOrder.length - 1;
         const forbiddenBid = isDealer ? getDealerForbiddenBid(bidValues) : null;
@@ -697,34 +770,6 @@ export default function GamePage() {
             <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
               Bidding
             </h2>
-
-            {/* Trump suit selector */}
-            <div className="mb-4">
-              <p className="text-xs text-gray-500 mb-2">Trump Suit</p>
-              <div className="flex gap-2">
-                {[
-                  { key: "Spades", label: "♠", color: "text-blue-300" },
-                  { key: "Hearts", label: "♥", color: "text-red-400" },
-                  { key: "Diamonds", label: "♦", color: "text-red-400" },
-                  { key: "Clubs", label: "♣", color: "text-blue-300" },
-                  { key: "No Trump", label: "NT", color: "text-gray-300" },
-                ].map((suit) => (
-                  <button
-                    key={suit.key}
-                    onClick={() => setSelectedTrump(suit.key)}
-                    className={`flex-1 py-2 rounded-xl border text-sm font-bold transition-all ${
-                      selectedTrump === suit.key
-                        ? "border-[#10b981] bg-[#10b981]/20 text-white"
-                        : "border-[#2d3d2d] bg-[#0f160f] hover:border-[#10b981]/40"
-                    }`}
-                  >
-                    <span className={selectedTrump === suit.key ? "" : suit.color}>
-                      {suit.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* Confirmed bids */}
             {confirmedBidders.length > 0 && (
@@ -765,9 +810,7 @@ export default function GamePage() {
                     fontSize="text-xl font-black"
                   />
                   <div>
-                    <div className="font-bold text-base">
-                      {currentBidder.name}
-                    </div>
+                    <div className="font-bold text-base">{currentBidder.name}</div>
                     <div className="flex items-center gap-2">
                       {isDealer && (
                         <span className="text-[10px] text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.5 rounded">
@@ -788,28 +831,25 @@ export default function GamePage() {
                   </div>
                 </div>
 
-                {/* Bid tiles — key changes per player so DOM is fresh (no lingering focus/highlight) */}
+                {/* Bid tiles — key resets DOM per player so no focus lingers */}
                 <div key={biddingPlayerIndex} className="grid grid-cols-2 gap-2">
-                  {Array.from(
-                    { length: currentRound.num_cards + 1 },
-                    (_, i) => {
-                      const isForbidden = isDealer && i === forbiddenBid;
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => handleSelectBid(i)}
-                          disabled={isForbidden || submitting}
-                          className={`w-full py-5 rounded-2xl text-2xl font-bold transition-all active:scale-95 ${
-                            isForbidden
-                              ? "bg-[#1a1a1a] border border-red-500/20 text-red-500/30 cursor-not-allowed"
-                              : "bg-[#161b16] border border-[#2d3d2d] hover:border-[#10b981] hover:bg-[#10b981]/10 hover:text-[#10b981]"
-                          }`}
-                        >
-                          {i}
-                        </button>
-                      );
-                    }
-                  )}
+                  {Array.from({ length: currentRound.num_cards + 1 }, (_, i) => {
+                    const isForbidden = isDealer && i === forbiddenBid;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleSelectBid(i)}
+                        disabled={isForbidden || submitting}
+                        className={`w-full py-5 rounded-2xl text-2xl font-bold transition-all active:scale-95 ${
+                          isForbidden
+                            ? "bg-[#1a1a1a] border border-red-500/20 text-red-500/30 cursor-not-allowed"
+                            : "bg-[#161b16] border border-[#2d3d2d] hover:border-[#10b981] hover:bg-[#10b981]/10 hover:text-[#10b981]"
+                        }`}
+                      >
+                        {i}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -884,7 +924,9 @@ export default function GamePage() {
                           +{tricksWon} pts
                         </span>
                       ) : (
-                        <span className="ml-2 text-gray-600">+0 pts</span>
+                        <span className="ml-2 text-gray-500">
+                          +{tricksWon} pts
+                        </span>
                       )}
                     </div>
                   </div>

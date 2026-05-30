@@ -80,6 +80,8 @@ async function initializeClient(): Promise<Client> {
     "ALTER TABLE games ADD COLUMN min_cards INTEGER NOT NULL DEFAULT 1",
     "ALTER TABLE games ADD COLUMN max_cards INTEGER NOT NULL DEFAULT 7",
     "ALTER TABLE players ADD COLUMN avatar_url TEXT",
+    // Retroactive scoring fix: underbid now earns tricks_won instead of 0
+    "UPDATE tricks SET score = tricks_won WHERE score = 0 AND tricks_won > 0",
   ]) {
     try {
       await db.execute(migration);
@@ -185,11 +187,11 @@ export function getNumRounds(maxCards: number, minCards: number = 1): number {
 // Utility: calculate score for a round
 // Exact bid: 10 + bid
 // Over bid (won more than bid): tricks_won
-// Under bid (won fewer than bid): 0
+// Under bid (won fewer than bid): tricks_won (partial credit)
 export function calculateScore(bid: number, tricksWon: number): number {
   if (tricksWon === bid) return 10 + bid;
   if (tricksWon > bid) return tricksWon;
-  return 0;
+  return tricksWon;
 }
 
 // Utility: calculate the theoretical maximum score for a game
