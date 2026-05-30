@@ -165,7 +165,7 @@ export default function NewGamePage() {
           <Link href="/" className="text-gray-400 hover:text-white">
             <ChevronLeft size={24} />
           </Link>
-          <h1 className="text-2xl font-bold">New Game</h1>
+          <h1 className="text-2xl font-bold">New game</h1>
           <div className="ml-auto flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-[#10b981]" />
             <div className="w-2 h-2 rounded-full bg-[#1f2d1f]" />
@@ -174,7 +174,7 @@ export default function NewGamePage() {
         <p className="text-xs text-gray-500 mb-5 pl-10">Step 1 of 2</p>
 
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-          Select Players ({selected.length})
+          Select players ({selected.length})
         </h2>
 
         {players.length === 0 ? (
@@ -232,7 +232,7 @@ export default function NewGamePage() {
           disabled={selected.length < 2}
           className="w-full bg-[#10b981] hover:bg-[#059669] disabled:bg-[#10b981]/30 disabled:text-white/40 text-white font-bold py-3.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
         >
-          Next: Set Seating Order <ChevronRight size={16} />
+          Next: set seating order <ChevronRight size={16} />
         </button>
       </div>
     );
@@ -248,7 +248,7 @@ export default function NewGamePage() {
         >
           <ChevronLeft size={24} />
         </button>
-        <h1 className="text-2xl font-bold">Seating Order</h1>
+        <h1 className="text-2xl font-bold">Seating order</h1>
         <div className="ml-auto flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-[#1f2d1f]" />
           <div className="w-2 h-2 rounded-full bg-[#10b981]" />
@@ -303,7 +303,7 @@ export default function NewGamePage() {
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-sm">{p.name}</div>
                 {index === 0 && (
-                  <div className="text-[10px] text-amber-400">First Dealer</div>
+                  <div className="text-[10px] text-amber-400">First dealer</div>
                 )}
               </div>
               <div className="flex flex-col gap-1">
@@ -335,7 +335,7 @@ export default function NewGamePage() {
         <div className="bg-[#161b16] border border-[#1f2d1f] rounded-xl p-4">
           <div className="grid grid-cols-2 gap-4 mb-3">
             <div>
-              <p className="text-xs text-gray-500 text-center mb-2">Min Cards</p>
+              <p className="text-xs text-gray-500 text-center mb-2">Min cards</p>
               <div className="flex items-center justify-between gap-2">
                 <button
                   onClick={() => setMinCards((v) => Math.max(1, v - 1))}
@@ -353,7 +353,7 @@ export default function NewGamePage() {
               </div>
             </div>
             <div>
-              <p className="text-xs text-gray-500 text-center mb-2">Max Cards</p>
+              <p className="text-xs text-gray-500 text-center mb-2">Max cards</p>
               <div className="flex items-center justify-between gap-2">
                 <button
                   onClick={() => setMaxCards((v) => Math.max(minCards, v - 1))}
@@ -388,7 +388,7 @@ export default function NewGamePage() {
         disabled={loading}
         className="w-full bg-[#10b981] hover:bg-[#059669] disabled:bg-[#10b981]/30 disabled:text-white/40 text-white font-bold py-3.5 rounded-xl transition-colors text-sm"
       >
-        {loading ? "Starting..." : "Start Game"}
+        {loading ? "Starting..." : "Start game"}
       </button>
     </div>
   );

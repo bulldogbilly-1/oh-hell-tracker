@@ -95,6 +95,7 @@ export async function GET(
     // in round N-1. Tiebreaker: recurse to N-2, N-3, … then seating position
     // (left of dealer first = best, dealer = worst — same as bidding order).
     let trumpSelectorId: number | null = null;
+    let trumpSelectorReason = "";
 
     if (currentRound && game.current_round > 1) {
       // Per-round scores for all completed rounds
@@ -126,21 +127,42 @@ export async function GET(
         ...playerIds.slice(0, di + 1),
       ];
 
-      function resolveSelector(candidates: number[], checkRound: number): number {
-        if (checkRound < 1 || Object.keys(roundScoreMap).length === 0) {
-          // Seating tiebreaker
-          return biddingOrderIds.find((id) => candidates.includes(id)) ?? candidates[0];
+      type SelectorResult = { id: number; tiedRounds: number; seatTiebreaker: boolean };
+
+      function resolveSelector(
+        candidates: number[],
+        checkRound: number,
+        tiedRounds: number
+      ): SelectorResult {
+        if (checkRound < 1) {
+          const id = biddingOrderIds.find((id) => candidates.includes(id)) ?? candidates[0];
+          return { id, tiedRounds, seatTiebreaker: true };
         }
         const roundData = roundScoreMap[checkRound];
-        if (!roundData) return resolveSelector(candidates, checkRound - 1);
+        if (!roundData) return resolveSelector(candidates, checkRound - 1, tiedRounds);
 
         const maxScore = Math.max(...candidates.map((id) => roundData[id] ?? 0));
         const top = candidates.filter((id) => (roundData[id] ?? 0) === maxScore);
-        if (top.length === 1) return top[0];
-        return resolveSelector(top, checkRound - 1);
+        if (top.length === 1) return { id: top[0], tiedRounds, seatTiebreaker: false };
+        return resolveSelector(top, checkRound - 1, tiedRounds + 1);
       }
 
-      trumpSelectorId = resolveSelector(playerIds, game.current_round - 1);
+      const { id: selId, tiedRounds, seatTiebreaker } = resolveSelector(
+        playerIds,
+        game.current_round - 1,
+        0
+      );
+      trumpSelectorId = selId;
+
+      if (seatTiebreaker) {
+        trumpSelectorReason = tiedRounds === 0
+          ? "Seating position"
+          : `Tied last ${tiedRounds} round${tiedRounds !== 1 ? "s" : ""} — closest to dealer`;
+      } else if (tiedRounds === 0) {
+        trumpSelectorReason = "Highest scorer last round";
+      } else {
+        trumpSelectorReason = `Tied last ${tiedRounds} round${tiedRounds !== 1 ? "s" : ""} — highest scorer the round before`;
+      }
     }
 
     return NextResponse.json({
@@ -152,6 +174,7 @@ export async function GET(
       tricks,
       scores,
       trumpSelectorId,
+      trumpSelectorReason,
     });
   } catch (error) {
     console.error(error);

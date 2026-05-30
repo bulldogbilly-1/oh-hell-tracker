@@ -50,6 +50,7 @@ interface GameData {
   tricks: { player_id: number; tricks_won: number; score: number }[];
   scores: { playerId: number; totalScore: number }[];
   trumpSelectorId: number | null;
+  trumpSelectorReason: string;
 }
 
 const SUIT_SYMBOLS: Record<string, string> = {
@@ -445,12 +446,12 @@ export default function GamePage() {
           <Link href="/" className="text-gray-400 hover:text-white">
             <ChevronLeft size={24} />
           </Link>
-          <h1 className="text-2xl font-bold">Game Complete</h1>
+          <h1 className="text-2xl font-bold">Game complete</h1>
         </div>
 
         <div className="text-center mb-6">
           <Trophy size={48} className="mx-auto text-yellow-400 mb-2" />
-          <p className="text-gray-400 text-sm">Final Standings</p>
+          <p className="text-gray-400 text-sm">Final standings</p>
         </div>
 
         {standings && (
@@ -545,7 +546,7 @@ export default function GamePage() {
           href="/"
           className="block w-full text-center bg-[#161b16] border border-[#1f2d1f] text-white font-semibold py-3 rounded-xl hover:border-[#10b981]/40"
         >
-          Back to Games
+          Back to games
         </Link>
       </div>
     );
@@ -558,7 +559,7 @@ export default function GamePage() {
       {showPrevRoundConfirm && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">
           <div className="bg-[#161b16] border border-[#2d3d2d] rounded-2xl p-5 w-full max-w-xs">
-            <h3 className="text-lg font-bold mb-2">Edit Round {game.current_round - 1}?</h3>
+            <h3 className="text-lg font-bold mb-2">Edit round {game.current_round - 1}?</h3>
             <p className="text-sm text-gray-400 mb-4">
               Round {game.current_round} will be discarded and Round {game.current_round - 1} results will be cleared so you can re-enter them.
             </p>
@@ -574,7 +575,7 @@ export default function GamePage() {
                 disabled={submitting}
                 className="flex-1 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 text-sm font-semibold"
               >
-                Go Back
+                Go back
               </button>
             </div>
           </div>
@@ -585,7 +586,7 @@ export default function GamePage() {
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">
           <div className="bg-[#161b16] border border-[#2d3d2d] rounded-2xl p-5 w-full max-w-xs">
-            <h3 className="text-lg font-bold mb-2">Delete Game?</h3>
+            <h3 className="text-lg font-bold mb-2">Delete game?</h3>
             <p className="text-sm text-gray-400 mb-4">
               This will permanently delete all rounds and scores.
             </p>
@@ -620,13 +621,16 @@ export default function GamePage() {
           <div className="flex items-center gap-2 text-xs text-gray-400">
             {currentRound && (
               <>
-                <span>
-                  Trump:{" "}
-                  <SuitBadge
-                    suit={selectedTrump || currentRound.trump_suit}
-                  />
-                </span>
-                <span>·</span>
+                {/* Only show trump once it's been chosen */}
+                {!(currentRound.phase === "bidding" && localPhase === "trump") && (
+                  <>
+                    <span>
+                      Trump:{" "}
+                      <SuitBadge suit={selectedTrump || currentRound.trump_suit} />
+                    </span>
+                    <span>·</span>
+                  </>
+                )}
                 <span>{currentRound.num_cards} cards</span>
                 {dealer && (
                   <>
@@ -734,7 +738,7 @@ export default function GamePage() {
                 />
                 <div>
                   <div className="font-bold text-sm">{selectorPlayer.name} picks trump</div>
-                  <div className="text-xs text-gray-500">Highest scorer last round</div>
+                  <div className="text-xs text-gray-500">{data.trumpSelectorReason}</div>
                 </div>
               </div>
             ) : (
