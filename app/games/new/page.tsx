@@ -43,44 +43,15 @@ export default function NewGamePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Drag state (mouse)
-  const mouseDragIndex = useRef<number | null>(null);
-  // Drag state (touch)
-  const touchDragIndex = useRef<number | null>(null);
+  // Pointer-based drag (works for both mouse and touch via setPointerCapture)
+  const dragFromIndex = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
-
-  // List ref for non-passive touchmove
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/players")
       .then((r) => r.json())
       .then(setPlayers);
-  }, []);
-
-  // Register non-passive touchmove so we can preventDefault (stop page scroll while dragging)
-  useEffect(() => {
-    const list = listRef.current;
-    if (!list) return;
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (touchDragIndex.current === null) return;
-      e.preventDefault();
-
-      const touch = e.touches[0];
-      const items = list.querySelectorAll<HTMLElement>("[data-drag-index]");
-      let over: number | null = null;
-      items.forEach((item) => {
-        const rect = item.getBoundingClientRect();
-        if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
-          over = parseInt(item.getAttribute("data-drag-index") ?? "0");
-        }
-      });
-      setDragOver(over);
-    };
-
-    list.addEventListener("touchmove", onTouchMove, { passive: false });
-    return () => list.removeEventListener("touchmove", onTouchMove);
   }, []);
 
   const reorder = (from: number, to: number) => {
@@ -92,46 +63,46 @@ export default function NewGamePage() {
     });
   };
 
-  // Mouse drag handlers
-  const handleMouseDragStart = (index: number) => {
-    mouseDragIndex.current = index;
+  const findItemIndexAtY = (clientY: number): number | null => {
+    const list = listRef.current;
+    if (!list) return null;
+    const items = list.querySelectorAll<HTMLElement>("[data-drag-index]");
+    let found: number | null = null;
+    items.forEach((item) => {
+      const rect = item.getBoundingClientRect();
+      if (clientY >= rect.top && clientY <= rect.bottom) {
+        found = parseInt(item.getAttribute("data-drag-index") ?? "0");
+      }
+    });
+    return found;
   };
-  const handleMouseDragOver = (e: React.DragEvent, index: number) => {
+
+  const handleGripPointerDown = (
+    e: React.PointerEvent<HTMLDivElement>,
+    index: number
+  ) => {
     e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragFromIndex.current = index;
     setDragOver(index);
   };
-  const handleMouseDrop = (index: number) => {
-    if (mouseDragIndex.current !== null && mouseDragIndex.current !== index) {
-      reorder(mouseDragIndex.current, index);
-    }
-    mouseDragIndex.current = null;
-    setDragOver(null);
-  };
-  const handleMouseDragEnd = () => {
-    mouseDragIndex.current = null;
-    setDragOver(null);
+
+  const handleGripPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragFromIndex.current === null) return;
+    const over = findItemIndexAtY(e.clientY);
+    if (over !== null) setDragOver(over);
   };
 
-  // Touch drag handlers
-  const handleTouchStart = (index: number) => {
-    touchDragIndex.current = index;
-  };
-  const handleTouchEnd = () => {
+  const handleGripPointerUp = () => {
     if (
-      touchDragIndex.current !== null &&
+      dragFromIndex.current !== null &&
       dragOver !== null &&
-      touchDragIndex.current !== dragOver
+      dragFromIndex.current !== dragOver
     ) {
-      reorder(touchDragIndex.current, dragOver);
+      reorder(dragFromIndex.current, dragOver);
     }
-    touchDragIndex.current = null;
+    dragFromIndex.current = null;
     setDragOver(null);
-  };
-
-  const togglePlayer = (id: number) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    );
   };
 
   const moveUp = (index: number) => {
@@ -150,6 +121,12 @@ export default function NewGamePage() {
       [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
       return arr;
     });
+  };
+
+  const togglePlayer = (id: number) => {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+    );
   };
 
   const goToStep2 = () => {
@@ -283,36 +260,37 @@ export default function NewGamePage() {
         Player Order
       </h2>
       <p className="text-xs text-gray-500 mb-3">
-        Drag or use arrows to reorder · first player deals first
+        Drag grip to reorder · first player deals first
       </p>
 
       <div ref={listRef} className="space-y-2 mb-6">
         {seatOrder.map((pid, index) => {
           const p = players.find((pl) => pl.id === pid);
           if (!p) return null;
-          const isOver = dragOver === index;
+          const isOver = dragOver === index && dragFromIndex.current !== index;
           return (
             <div
               key={pid}
               data-drag-index={index}
-              draggable
-              onDragStart={() => handleMouseDragStart(index)}
-              onDragOver={(e) => handleMouseDragOver(e, index)}
-              onDrop={() => handleMouseDrop(index)}
-              onDragLeave={() => setDragOver(null)}
-              onDragEnd={handleMouseDragEnd}
-              onTouchStart={() => handleTouchStart(index)}
-              onTouchEnd={handleTouchEnd}
               className={`flex items-center gap-3 p-3 rounded-xl border transition-all select-none ${
                 isOver
                   ? "border-[#10b981]/60 bg-[#10b981]/10"
+                  : dragFromIndex.current === index
+                  ? "border-[#10b981]/30 bg-[#10b981]/5 opacity-60"
                   : "border-[#1f2d1f] bg-[#161b16]"
               }`}
             >
-              <GripVertical
-                size={18}
-                className="text-gray-500 flex-shrink-0 touch-none"
-              />
+              {/* Grip handle — pointer events captured here */}
+              <div
+                className="touch-none cursor-grab active:cursor-grabbing p-0.5 -ml-0.5"
+                onPointerDown={(e) => handleGripPointerDown(e, index)}
+                onPointerMove={handleGripPointerMove}
+                onPointerUp={handleGripPointerUp}
+                onPointerCancel={handleGripPointerUp}
+              >
+                <GripVertical size={18} className="text-gray-500" />
+              </div>
+
               <span className="text-sm text-gray-500 w-4 flex-shrink-0">
                 {index + 1}.
               </span>

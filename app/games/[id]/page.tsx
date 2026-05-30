@@ -11,6 +11,7 @@ import {
   Eye,
   Trash2,
   RotateCcw,
+  Undo2,
 } from "lucide-react";
 import Link from "next/link";
 import { useAdmin } from "../../context/AdminContext";
@@ -125,6 +126,7 @@ export default function GamePage() {
   const [error, setError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showPrevRoundConfirm, setShowPrevRoundConfirm] = useState(false);
   const [finalStandings, setFinalStandings] = useState<
     Array<{
       playerId: number;
@@ -342,6 +344,27 @@ export default function GamePage() {
     }
   };
 
+  // ── Go back to previous round ──────────────────────────────────────────────
+  const handleGoBackRound = async () => {
+    setSubmitting(true);
+    setError("");
+    setShowPrevRoundConfirm(false);
+    try {
+      const res = await fetch(`/api/games/${gameId}/rounds/back`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error);
+      }
+      await loadGame();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // ── Next Round / Complete ───────────────────────────────────────────────────
   const handleNextRound = async () => {
     setSubmitting(true);
@@ -516,6 +539,33 @@ export default function GamePage() {
   // ── Active game ─────────────────────────────────────────────────────────────
   return (
     <div className="p-4">
+      {/* Previous round confirm modal */}
+      {showPrevRoundConfirm && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">
+          <div className="bg-[#161b16] border border-[#2d3d2d] rounded-2xl p-5 w-full max-w-xs">
+            <h3 className="text-lg font-bold mb-2">Edit Round {game.current_round - 1}?</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              Round {game.current_round} will be discarded and Round {game.current_round - 1} results will be cleared so you can re-enter them.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPrevRoundConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-[#2d3d2d] text-gray-400 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGoBackRound}
+                disabled={submitting}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 text-sm font-semibold"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete confirm modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">
@@ -574,12 +624,23 @@ export default function GamePage() {
           </div>
         </div>
         {isAdmin && (
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="text-gray-600 hover:text-red-400 transition-colors ml-auto"
-          >
-            <Trash2 size={18} />
-          </button>
+          <div className="flex items-center gap-2 ml-auto">
+            {game.current_round > 1 && (
+              <button
+                onClick={() => setShowPrevRoundConfirm(true)}
+                title={`Edit Round ${game.current_round - 1}`}
+                className="text-gray-600 hover:text-amber-400 transition-colors"
+              >
+                <Undo2 size={17} />
+              </button>
+            )}
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-gray-600 hover:text-red-400 transition-colors"
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
         )}
       </div>
 
